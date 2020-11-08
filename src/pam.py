@@ -5,6 +5,7 @@ import subprocess
 import os
 import glob
 import syslog
+import datetime
 
 # pam-python is running python 2, so we use the old module here
 import ConfigParser
@@ -17,9 +18,15 @@ config.read(os.path.dirname(os.path.abspath(__file__)) + "/config.ini")
 def doAuth(pamh):
 	"""Starts authentication in a seperate process"""
 
-	# Abort is Howdy is disabled
-	if config.getboolean("core", "disabled"):
-		return pamh.PAM_AUTHINFO_UNAVAIL
+	# Abort is Howdy is disabled or if the current time is within the specified range.
+	try:
+		if config.getboolean("core", "disabled"):
+			return pamh.PAM_AUTHINFO_UNAVAIL
+	except ValueError:
+		start, end = config.get("core", "disabled").split('-')
+		start, end = [datetime.datetime.strptime(i.strip(), "%H:%M") for i in (start, end)]
+		if start.time() < datetime.datetime.now().time() < end.time() == start < end: # Only true when the current time is between the start and end time, while accounting for the possibility of `end` being on the next day.
+			return pamh.PAM_AUTHINFO_UNAVAIL
 
 	# Abort if we're in a remote SSH env
 	if config.getboolean("core", "ignore_ssh"):
