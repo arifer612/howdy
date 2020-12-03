@@ -23,9 +23,8 @@ def doAuth(pamh):
 		if config.getboolean("core", "disabled"):
 			return pamh.PAM_AUTHINFO_UNAVAIL
 	except ValueError:
-		start, end = config.get("core", "disabled").split('-')
-		start, end = [datetime.datetime.strptime(i.strip(), "%H:%M") for i in (start, end)]
-		if (start.time() < datetime.datetime.now().time() < end.time()) == (start < end): # Only true when the current time is between the start and end time, while accounting for the possibility of `end` being on the next day.
+		start, end = [datetime.datetime.strptime(i.strip(), "%H:%M") for i in config.get("core", "disabled").split('-')]
+		if (min(start.time(), end.time()) < datetime.datetime.now().time() < max(start.time(), end.time())) == (start.time() < end.time()): # Only true when the current time is between the start and end time, accounting for the possibility of `end` being on the next day.
 			return pamh.PAM_AUTHINFO_UNAVAIL
 
 	# Abort if we're in a remote SSH env
